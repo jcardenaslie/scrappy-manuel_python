@@ -11,7 +11,7 @@ class QuotesSpider(scrapy.Spider):
 	
 	def start_requests(self):
 		
-		datos = pd.read_csv('C:/Users/jquin/Desktop/manuel/rut.csv')
+		datos = pd.read_csv('C:/Users/joaquin/Desktop/tutorial/rut.csv')
 		datos=datos[66:]
 		datos = datos.as_matrix()
 
