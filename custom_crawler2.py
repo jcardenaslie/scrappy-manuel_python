@@ -56,7 +56,7 @@ def main():
         print(str(e.reason))
         
         if str(e.reason)== 'Internal Server Error':
-          save_to_csv('No disponible',url[0], success=False)
+          # save_to_csv('No disponible',url[0], success=False)
           keep_trying = False
           break
         
