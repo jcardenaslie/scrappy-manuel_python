@@ -8,9 +8,102 @@ import pandas as pd
 
 ua = UserAgent() # From here we generate a random user agent
 proxies = [] # Will contain proxies [ip, port]
-
+data = []
 # Main function
+
+def get_proxy(proxies):
+  proxy_index = random_proxy(proxies)
+  proxy = proxies[proxy_index]
+  proxy_string = proxy['ip'] + ':' + proxy['port']
+  return proxy_string, proxy_index, proxy
+
 def main():
+  
+  proxies = find_proxies()
+
+  proxy_string, proxy_index, proxy = get_proxy(proxies)
+  
+  urls = target_urls(start_index=2432)
+  
+  n = 0
+  
+
+  for url in urls:
+    keep_trying = True
+    
+    while keep_trying:
+      print('')
+      print(url[1])
+      print('Using: {}'.format(proxy_string))
+      
+      try:
+        
+        req = Request(url[1])
+        req.set_proxy(proxy_string, 'http')
+
+        my_ip = urlopen(req).read().decode('utf8')
+
+        success = save_to_csv(my_ip,url[0], success=True)
+        
+
+        keep_trying = False
+
+        if success == False:
+          print('REDIRECTED')
+          proxy_string, proxy_index, proxy = get_proxy(proxies)
+          keep_trying = True
+      except urllib.error.URLError as e: # If error, delete this proxy and find another one
+        print(str(e.reason))
+        
+        if str(e.reason)== 'Internal Server Error':
+          save_to_csv('No disponible',url[0], success=False)
+          keep_trying = False
+          break
+        
+        del proxies[proxy_index]
+        
+        print('Proxy ' + proxy['ip'] + ':' + proxy['port'] + ' deleted.')
+        
+        proxy_string, proxy_index, proxy = get_proxy(proxies)
+
+# Retrieve a random index proxy (we need the index to delete it if not working)
+def random_proxy(proxies):
+  return random.randint(0, len(proxies) - 1)
+
+
+def save_to_csv(string,rut_id, success=True):
+  
+  if success:
+    soup = BeautifulSoup(string,"lxml")
+    name = soup.title.string.split("-")[0]
+    
+    if name == 'mercantil.com el portal de negocios lider en Chile':
+      print('REDIRECTED')
+      return False
+
+    rut = ''
+
+    divs = soup.find_all('div', class_='separador_mobile')
+
+    for div in divs:
+      if div.p.text == 'Rut':
+        rut = ('').join(div.span.text.split('-'))
+        print('RUT: {}'.format(rut))
+          
+    print('NAME: {}'.format(name))
+  else:
+    rut = rut_id
+    name = string
+  
+  global data        
+  data.append([rut_id,name])
+  df = pd.DataFrame(data)
+  df.to_csv('ruts_nombres13.csv', index=False, header=['Rut','Nombre'])
+  print('Saved file')
+  return True
+
+
+def find_proxies():
   # Retrieve latest proxies
   proxies_req = Request('https://www.sslproxies.org/')
   proxies_req.add_header('User-Agent', ua.random)
@@ -18,21 +111,23 @@ def main():
 
   soup = BeautifulSoup(proxies_doc, 'html.parser')
   proxies_table = soup.find(id='proxylisttable')
-
+  
   # Save proxies in the array
+  proxies = []
+  
   for row in proxies_table.tbody.find_all('tr'):
     proxies.append({
       'ip':   row.find_all('td')[0].string,
       'port': row.find_all('td')[1].string
     })
+  
+  assert (len(proxies) > 0)
 
-  # Choose a random proxy
-  proxy_index = random_proxy()
-  proxy = proxies[proxy_index]
+  return proxies
 
-
-  datos = pd.read_csv('C:/Users/joaquin/Desktop/tutorial/rut.csv')
-  datos=datos[66:]
+def target_urls(start_index = 0):
+  datos = pd.read_csv('rut.csv')
+  # datos=datos[66:]
   datos = datos.as_matrix()
   searches = []
   
@@ -43,66 +138,14 @@ def main():
   # test_searches = searches[0:20]
 
   urls = []
-  searches = searches[1000:]
+  searches = searches[start_index:]
   for search in searches:
-      urls.append('https://www.mercantil.com/SE/results.asp?keywords='+search)
+      rut = search
+      url = 'https://www.mercantil.com/SE/results.asp?keywords='+search
+      urls.append((rut,url))
 
-  # for n in range(1, 100):
-  n = 0
-  data = []
-  
+  return urls
 
-  for url in urls:
-    keep_trying = True
-    while keep_trying:
-      print(url)
-      
-      try:
-        req = Request(url)
-        req.set_proxy(proxy['ip'] + ':' + proxy['port'], 'http')
-
-        proxy_index = random_proxy()
-        proxy = proxies[proxy_index]
-
-        my_ip = urlopen(req).read().decode('utf8')
-
-        save_to_csv(my_ip,data)
-        keep_trying = False
-        # print('#' + str(n) + ': ' + my_ip)
-      except urllib.error.URLError as e: # If error, delete this proxy and find another one
-        print(str(e.reason))
-        if str(e.reason)== 'Internal Server Error':
-          keep_trying = False
-          break
-        del proxies[proxy_index]
-        print('Proxy ' + proxy['ip'] + ':' + proxy['port'] + ' deleted.')
-        proxy_index = random_proxy()
-        proxy = proxies[proxy_index]
-
-# Retrieve a random index proxy (we need the index to delete it if not working)
-def random_proxy():
-  return random.randint(0, len(proxies) - 1)
-
-
-def save_to_csv(string,data):
-  soup = BeautifulSoup(string,"lxml")
-  name = soup.title.string.split("-")[0]
-  rut = ''
-
-  divs = soup.find_all('div', class_='separador_mobile')
-
-  for div in divs:
-    if div.p.text == 'Rut':
-      rut = ('').join(div.span.text.split('-'))
-      print('RUT: {}'.format(rut))
-        
-  print('NAME: {}'.format(name))
-
-             
-  data.append([rut,name])
-  df = pd.DataFrame(data)
-  df.to_csv('ruts_nombres.csv', index=False, header=['Rut','Nombre'])
-  print('Saved file')
 
 if __name__ == '__main__':
   main()

@@ -11,7 +11,7 @@ class QuotesSpider(scrapy.Spider):
 	
 	def start_requests(self):
 		
-		datos = pd.read_csv('C:/Users/joaquin/Desktop/tutorial/rut.csv')
+		datos = pd.read_csv('C:/Users/jquin/Desktop\manuel/scrapy_project/tutorial/rut.csv')
 		datos=datos[66:]
 		datos = datos.as_matrix()
 
@@ -60,7 +60,7 @@ class QuotesSpider(scrapy.Spider):
 			     
 			self.data.append([rut,name])
 			df = pd.DataFrame(self.data)
-			df.to_csv('ruts_nombres.csv', index=False, header=['Rut','Nombre'])
+			df.to_csv('ruts_spider.csv', index=False, header=['Rut','Nombre'])
 			self.log('Saved file')
 		except:
 			self.log('HUBO UN ERROR ERROR ERROR')
